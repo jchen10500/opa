@@ -990,6 +990,10 @@ func parseSchema(schema interface{}) (types.Type, error) {
 		return parseSchema(allOfResult)
 	}
 
+	if subSchema.Enum != nil {
+		return types.NewEnum(subSchema.Enum), nil
+	}
+
 	if subSchema.Types.IsTyped() {
 		if subSchema.Types.Contains("boolean") {
 			return types.B, nil

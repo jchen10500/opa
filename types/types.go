@@ -34,6 +34,7 @@ func (Null) typeMarker() string     { return typeNull }
 func (Boolean) typeMarker() string  { return typeBoolean }
 func (Number) typeMarker() string   { return typeNumber }
 func (String) typeMarker() string   { return typeString }
+func (Enum) typeMarker() string     { return typeEnum }
 func (*Array) typeMarker() string   { return typeArray }
 func (*Object) typeMarker() string  { return typeObject }
 func (*Set) typeMarker() string     { return typeSet }
@@ -124,6 +125,50 @@ func (t Number) MarshalJSON() ([]byte, error) {
 
 func (Number) String() string {
 	return typeNumber
+}
+
+type Enum struct {
+	Values []string
+}
+
+var E = NewEnum(make([]string, 0))
+
+func NewEnum(strings []string) Enum {
+	return Enum{
+		Values: strings,
+	}
+}
+
+func (t Enum) MarshalJSON() ([]byte, error) {
+	repr := map[string]interface{}{
+		"type": t.typeMarker(),
+	}
+	if len(t.Values) != 0 {
+		repr["values"] = t.Values
+	}
+	return json.Marshal(repr)
+}
+
+func (t Enum) String() string {
+	prefix := "enum"
+	if len(t.Values) == 0 {
+		return prefix
+	}
+	buf := make([]string, len(t.Values))
+	for i, item := range t.Values {
+		buf[i] = item
+	}
+	return prefix + "<" + strings.Join(buf, ", ") + ">"
+}
+
+// // Contains returns true if t is a superset of other.
+func (t Enum) Contains(other string) bool {
+	for i := range t.Values {
+		if t.Values[i] == other {
+			return true
+		}
+	}
+	return len(t.Values) == 0
 }
 
 // Array represents the array type.
@@ -554,7 +599,7 @@ func Compare(a, b Type) int {
 		return -1
 	}
 	switch a.(type) {
-	case nil, Null, Boolean, Number, String:
+	case nil, Null, Boolean, Number, String, Enum:
 		return 0
 	case *Array:
 		arrA := a.(*Array)
@@ -894,7 +939,7 @@ func typeOrder(x Type) int {
 		return 1
 	case Number:
 		return 2
-	case String:
+	case String, Enum:
 		return 3
 	case *Array:
 		return 4

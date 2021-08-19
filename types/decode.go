@@ -16,6 +16,7 @@ const (
 	typeBoolean  = "boolean"
 	typeNumber   = "number"
 	typeString   = "string"
+	typeEnum     = "enum"
 	typeArray    = "array"
 	typeSet      = "set"
 	typeObject   = "object"
@@ -38,6 +39,7 @@ func Unmarshal(bs []byte) (result Type, err error) {
 			result = NewNumber()
 		case typeString:
 			result = NewString()
+		// case typeEn
 		case typeArray:
 			var arr rawarray
 			if err = util.UnmarshalJSON(bs, &arr); err == nil {

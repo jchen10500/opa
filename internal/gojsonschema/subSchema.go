@@ -138,7 +138,7 @@ type SubSchema struct {
 
 	// validation : all
 	_const *string //const is a golang keyword
-	enum   []string
+	Enum   []string
 
 	// validation : SubSchema
 	oneOf []*SubSchema

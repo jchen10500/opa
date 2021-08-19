@@ -60,7 +60,7 @@ func TestSetTypesWithSchemaRef(t *testing.T) {
 	if newtype == nil {
 		t.Fatalf("parseSchema returned nil type")
 	}
-	if newtype.String() != "object<apiVersion: string, kind: string, metadata: object<annotations: object[any: any], clusterName: string, creationTimestamp: string, deletionGracePeriodSeconds: number, deletionTimestamp: string, finalizers: array[string], generateName: string, generation: number, initializers: object<pending: array[object<name: string>], result: object<apiVersion: string, code: number, details: object<causes: array[object<field: string, message: string, reason: string>], group: string, kind: string, name: string, retryAfterSeconds: number, uid: string>, kind: string, message: string, metadata: object<continue: string, resourceVersion: string, selfLink: string>, reason: string, status: string>>, labels: object[any: any], managedFields: array[object<apiVersion: string, fields: object[any: any], manager: string, operation: string, time: string>], name: string, namespace: string, ownerReferences: array[object<apiVersion: string, blockOwnerDeletion: boolean, controller: boolean, kind: string, name: string, uid: string>], resourceVersion: string, selfLink: string, uid: string>>" {
+	if newtype.String() != "object<apiVersion: string, kind: enum<\"Pod\">, metadata: object<annotations: object[any: any], clusterName: string, creationTimestamp: string, deletionGracePeriodSeconds: number, deletionTimestamp: string, finalizers: array[string], generateName: string, generation: number, initializers: object<pending: array[object<name: string>], result: object<apiVersion: string, code: number, details: object<causes: array[object<field: string, message: string, reason: string>], group: string, kind: string, name: string, retryAfterSeconds: number, uid: string>, kind: enum<\"Status\">, message: string, metadata: object<continue: string, resourceVersion: string, selfLink: string>, reason: string, status: string>>, labels: object[any: any], managedFields: array[object<apiVersion: string, fields: object[any: any], manager: string, operation: string, time: string>], name: string, namespace: string, ownerReferences: array[object<apiVersion: string, blockOwnerDeletion: boolean, controller: boolean, kind: string, name: string, uid: string>], resourceVersion: string, selfLink: string, uid: string>>" {
 		t.Fatalf("parseSchema returned an incorrect type: %s", newtype.String())
 	}
 }
@@ -499,6 +499,105 @@ func TestAnyOfSchema(t *testing.T) {
 			note:     "anyOf as parent",
 			schema:   anyOfSchemaParentVariation,
 			expected: anyOfParentVarType,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.note, func(t *testing.T) {
+			testParseSchema(t, tc.schema, tc.expected, nil)
+		})
+	}
+}
+
+func TestEnumSchemas(t *testing.T) {
+
+	// Test 1: enum containing of type string
+	enumStrProps := []*types.StaticProperty{
+		types.NewStaticProperty("server",
+			types.NewEnum([]string{"one", "two", "three"}))}
+
+	enumStrType := types.NewObject(enumStrProps, nil)
+
+	// Test 2: enum containing of type number
+	enumNumProps := []*types.StaticProperty{
+		types.NewStaticProperty("server",
+			types.NewEnum([]string{"1", "2", "3"}))}
+
+	enumNumType := types.NewObject(enumNumProps, nil)
+
+	// Test 3: enum containing of type null
+	enumNullProps := []*types.StaticProperty{
+		types.NewStaticProperty("server",
+			types.NewEnum([]string{"null"}))}
+
+	enumNullType := types.NewObject(enumNullProps, nil)
+
+	// Test 4: enum containing of type boolean
+	enumBoolProps := []*types.StaticProperty{
+		types.NewStaticProperty("server",
+			types.NewEnum([]string{"true"}))}
+
+	enumBoolType := types.NewObject(enumBoolProps, nil)
+
+	// Test 5: enum containing mixed types
+	enumMixProps := []*types.StaticProperty{
+		types.NewStaticProperty("server",
+			types.NewEnum([]string{"one", "3", "null", "true"}))}
+
+	enumMixType := types.NewObject(enumMixProps, nil)
+
+	// Test 6: enum belonging to an array
+	arrNewEnum := types.NewEnum([]string{"one", "two", "4"})
+	enumArray := types.NewArray(nil, arrNewEnum)
+
+	// Test 7: enum belonging to an anyOf
+	anyOfProp1 := types.NewEnum([]string{"one", "two", "5"})
+	anyOfProp2 := types.NewObject([]*types.StaticProperty{
+		types.NewStaticProperty("prop1", types.S),
+		types.NewStaticProperty("prop2", types.N)}, nil)
+	anyOfOrType := types.Or(anyOfProp1, anyOfProp2)
+	anyOfCoreProp := types.NewStaticProperty("server", anyOfOrType)
+	anyOfObj := types.NewObject([]*types.StaticProperty{anyOfCoreProp}, nil)
+
+	tests := []struct {
+		note     string
+		schema   string
+		expected types.Type
+	}{
+		{
+			note:     "enum contains type string",
+			schema:   enumStringSchema,
+			expected: enumStrType,
+		},
+		{
+			note:     "enum contains type num",
+			schema:   enumNumberSchema,
+			expected: enumNumType,
+		},
+		{
+			note:     "enum contains type null",
+			schema:   enumNullSchema,
+			expected: enumNullType,
+		},
+		{
+			note:     "enum contains type boolean",
+			schema:   enumBooleanSchema,
+			expected: enumBoolType,
+		},
+		{
+			note:     "enum contains mixex types",
+			schema:   enumMixSchema,
+			expected: enumMixType,
+		},
+		{
+			note:     "enum inside an array",
+			schema:   enumArraySchema,
+			expected: enumArray,
+		},
+		{
+			note:     "enum inside an anyOf",
+			schema:   enumAnyOfSchema,
+			expected: anyOfObj,
 		},
 	}
 

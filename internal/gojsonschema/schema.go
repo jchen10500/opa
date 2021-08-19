@@ -672,13 +672,13 @@ func (d *Schema) parseSchema(documentNode interface{}, currentSchema *SubSchema)
 		if err != nil {
 			return err
 		}
-		if isStringInSlice(currentSchema.enum, *is) {
+		if isStringInSlice(currentSchema.Enum, *is) {
 			return errors.New(formatErrorDescription(
 				Locale.KeyItemsMustBeUnique(),
 				ErrorDetails{"key": KeyEnum},
 			))
 		}
-		currentSchema.enum = append(currentSchema.enum, *is)
+		currentSchema.Enum = append(currentSchema.Enum, *is)
 	}
 
 	// validation : SubSchema
