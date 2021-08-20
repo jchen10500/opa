@@ -404,7 +404,7 @@ func (v *SubSchema) validateCommon(currentSubSchema *SubSchema, value interface{
 
 	// const:
 	if currentSubSchema._const != nil {
-		vString, err := marshalWithoutNumber(value)
+		vString, err := MarshalWithoutNumber(value)
 		if err != nil {
 			result.addInternalError(new(InternalError), context, value, ErrorDetails{"error": err})
 		}
@@ -420,18 +420,18 @@ func (v *SubSchema) validateCommon(currentSubSchema *SubSchema, value interface{
 	}
 
 	// enum:
-	if len(currentSubSchema.enum) > 0 {
-		vString, err := marshalWithoutNumber(value)
+	if len(currentSubSchema.Enum) > 0 {
+		vString, err := MarshalWithoutNumber(value)
 		if err != nil {
 			result.addInternalError(new(InternalError), context, value, ErrorDetails{"error": err})
 		}
-		if !isStringInSlice(currentSubSchema.enum, *vString) {
+		if !isStringInSlice(currentSubSchema.Enum, *vString) {
 			result.addInternalError(
 				new(EnumError),
 				context,
 				value,
 				ErrorDetails{
-					"allowed": strings.Join(currentSubSchema.enum, ", "),
+					"allowed": strings.Join(currentSubSchema.Enum, ", "),
 				},
 			)
 		}
@@ -527,7 +527,7 @@ func (v *SubSchema) validateArray(currentSubSchema *SubSchema, value []interface
 	if currentSubSchema.uniqueItems {
 		var stringifiedItems = make(map[string]int)
 		for j, v := range value {
-			vString, err := marshalWithoutNumber(v)
+			vString, err := MarshalWithoutNumber(v)
 			if err != nil {
 				result.addInternalError(new(InternalError), context, value, ErrorDetails{"err": err})
 			}

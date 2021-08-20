@@ -34,6 +34,7 @@ func (Null) typeMarker() string     { return typeNull }
 func (Boolean) typeMarker() string  { return typeBoolean }
 func (Number) typeMarker() string   { return typeNumber }
 func (String) typeMarker() string   { return typeString }
+func (Enum) typeMarker() string     { return typeEnum }
 func (*Array) typeMarker() string   { return typeArray }
 func (*Object) typeMarker() string  { return typeObject }
 func (*Set) typeMarker() string     { return typeSet }
@@ -124,6 +125,64 @@ func (t Number) MarshalJSON() ([]byte, error) {
 
 func (Number) String() string {
 	return typeNumber
+}
+
+// Enum represents an enumerated type, can contain null, boolean, number, and string values
+type Enum struct {
+	Type   Type
+	Values []string
+}
+
+// E represnts an instance of the Enum type
+var E = NewEnum(A, make([]string, 0))
+
+// NewEnum returns a new Enum type
+func NewEnum(Type Type, values []string) Enum {
+	return Enum{
+		Type:   Type,
+		Values: values,
+	}
+}
+
+// MarshalJSON returns the JSON encoding of t
+func (t Enum) MarshalJSON() ([]byte, error) {
+	repr := map[string]interface{}{
+		"type": t.typeMarker(),
+	}
+	if len(t.Values) != 0 {
+		repr["values"] = t.Values
+	}
+	return json.Marshal(repr)
+}
+
+func (t Enum) String() string {
+	prefix := "enum "
+	if len(t.Values) == 0 {
+		return prefix
+	}
+	buf := make([]string, len(t.Values))
+	for i, item := range t.Values {
+		buf[i] = item
+	}
+	return prefix + t.Type.String() + "<" + strings.Join(buf, ", ") + ">"
+}
+
+// ContainsValue returns true if t contains the other value.
+func (t Enum) ContainsValue(other string) bool {
+	for i := range t.Values {
+		if t.Values[i] == other {
+			return true
+		}
+	}
+	return len(t.Values) == 0
+}
+
+// IsSameType returns true if t and other contians the same enumerated type
+func (t Enum) IsSameType(other Type) bool {
+	if t.Type.typeMarker() == other.typeMarker() {
+		return true
+	}
+	return false
 }
 
 // Array represents the array type.
@@ -554,7 +613,7 @@ func Compare(a, b Type) int {
 		return -1
 	}
 	switch a.(type) {
-	case nil, Null, Boolean, Number, String:
+	case nil, Null, Boolean, Number, String, Enum:
 		return 0
 	case *Array:
 		arrA := a.(*Array)
@@ -894,7 +953,7 @@ func typeOrder(x Type) int {
 		return 1
 	case Number:
 		return 2
-	case String:
+	case String, Enum:
 		return 3
 	case *Array:
 		return 4

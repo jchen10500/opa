@@ -990,6 +990,55 @@ func parseSchema(schema interface{}) (types.Type, error) {
 		return parseSchema(allOfResult)
 	}
 
+	if subSchema.Enum != nil {
+		var enumType types.Type
+
+		for _, v := range subSchema.Enum {
+			// parses a enum string by \" (will result in an array of len 1 or 3)
+			s := strings.Split(v, "\"")
+			var enumStr string
+			if len(s) == 1 {
+				enumStr = s[0]
+			} else if len(s) == 3 {
+				enumStr = s[1]
+			} else {
+				return nil, fmt.Errorf("did not successfully parse enum string value: %v", s)
+			}
+
+			// Determine type of each value in enum
+			switch enumStr {
+			case "null":
+				enumType = types.Or(types.NewNull(), enumType)
+			case "true", "false":
+				enumType = types.Or(types.B, enumType)
+			default:
+				if isNumeric(enumStr) {
+					enumType = types.Or(types.N, enumType)
+				} else {
+					enumType = types.Or(types.S, enumType)
+				}
+			}
+		}
+
+		// Type of enum is declared by the schema
+		if subSchema.Types.IsTyped() {
+			if subSchema.Types.Contains("boolean") {
+				return types.NewEnum(types.B, subSchema.Enum), nil
+			} else if subSchema.Types.Contains("string") {
+				return types.NewEnum(types.S, subSchema.Enum), nil
+			} else if subSchema.Types.Contains("integer") || subSchema.Types.Contains("number") {
+				return types.NewEnum(types.N, subSchema.Enum), nil
+			}
+		}
+
+		// Determine the type in enum array if schema does not specify it
+		// If enum contains only one type, assume that. Otherwise if there are mixed types assume types.A
+		if _, ok := enumType.(types.Any); ok {
+			return types.NewEnum(types.A, subSchema.Enum), nil
+		}
+		return types.NewEnum(enumType, subSchema.Enum), nil
+	}
+
 	if subSchema.Types.IsTyped() {
 		if subSchema.Types.Contains("boolean") {
 			return types.B, nil
@@ -1051,6 +1100,34 @@ func parseSchema(schema interface{}) (types.Type, error) {
 	}
 
 	return types.A, nil
+}
+
+func isNumeric(s string) bool {
+	_, err := strconv.ParseFloat(s, 64)
+	return err == nil
+}
+
+func isEnumSametype(enumType types.Type, declaredType types.Type) bool {
+	if _, ok := enumType.(types.Any); ok {
+		return false
+	}
+
+	switch declaredType.(type) {
+	case types.Null:
+		_, ok := enumType.(types.Null)
+		return ok
+	case types.Boolean:
+		_, ok := enumType.(types.Boolean)
+		return ok
+	case types.Number:
+		_, ok := enumType.(types.Number)
+		return ok
+	case types.String:
+		_, ok := enumType.(types.String)
+		return ok
+	}
+
+	return false
 }
 
 // checkTypes runs the type checker on all rules. The type checker builds a

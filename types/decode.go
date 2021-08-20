@@ -16,6 +16,7 @@ const (
 	typeBoolean  = "boolean"
 	typeNumber   = "number"
 	typeString   = "string"
+	typeEnum     = "enum"
 	typeArray    = "array"
 	typeSet      = "set"
 	typeObject   = "object"

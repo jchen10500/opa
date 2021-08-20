@@ -51,7 +51,7 @@ func marshalToJSONString(value interface{}) (*string, error) {
 	return &sBytes, nil
 }
 
-func marshalWithoutNumber(value interface{}) (*string, error) {
+func MarshalWithoutNumber(value interface{}) (*string, error) {
 
 	// The JSON is decoded using https://golang.org/pkg/encoding/json/#Decoder.UseNumber
 	// This means the numbers are internally still represented as strings and therefore 1.00 is unequal to 1

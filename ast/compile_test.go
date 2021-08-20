@@ -4547,6 +4547,76 @@ func TestAnyOfArrayMissing(t *testing.T) {
 	}
 }
 
+func TestEnumStringSchema(t *testing.T) {
+	c := NewCompiler()
+	schemaSet := NewSchemaSet()
+	schemaSet.Put(SchemaRootRef, enumStringSchema)
+	c.WithSchemas(schemaSet)
+	if c.schemaSet == nil {
+		t.Fatalf("Did not correctly compile an enum schema of strings")
+	}
+}
+
+func TestEnumNumberSchema(t *testing.T) {
+	c := NewCompiler()
+	schemaSet := NewSchemaSet()
+	schemaSet.Put(SchemaRootRef, enumNumberSchema)
+	c.WithSchemas(schemaSet)
+	if c.schemaSet == nil {
+		t.Fatalf("Did not correctly compile an enum schema of numbers")
+	}
+}
+
+func TestEnumNullSchema(t *testing.T) {
+	c := NewCompiler()
+	schemaSet := NewSchemaSet()
+	schemaSet.Put(SchemaRootRef, enumNullSchema)
+	c.WithSchemas(schemaSet)
+	if c.schemaSet == nil {
+		t.Fatalf("Did not correctly compile an enum schema of null")
+	}
+}
+
+func TestEnumBooleanSchema(t *testing.T) {
+	c := NewCompiler()
+	schemaSet := NewSchemaSet()
+	schemaSet.Put(SchemaRootRef, enumBooleanSchema)
+	c.WithSchemas(schemaSet)
+	if c.schemaSet == nil {
+		t.Fatalf("Did not correctly compile an enum schema of boolean")
+	}
+}
+
+func TestEnumMixSchema(t *testing.T) {
+	c := NewCompiler()
+	schemaSet := NewSchemaSet()
+	schemaSet.Put(SchemaRootRef, enumMixSchema)
+	c.WithSchemas(schemaSet)
+	if c.schemaSet == nil {
+		t.Fatalf("Did not correctly compile an enum schema of mix types of string, num, bool, and null")
+	}
+}
+
+func TestEnumArraySchema(t *testing.T) {
+	c := NewCompiler()
+	schemaSet := NewSchemaSet()
+	schemaSet.Put(SchemaRootRef, enumArraySchema)
+	c.WithSchemas(schemaSet)
+	if c.schemaSet == nil {
+		t.Fatalf("Did not correctly compile an enum inside an array")
+	}
+}
+
+func TestEnumAnyOfSchema(t *testing.T) {
+	c := NewCompiler()
+	schemaSet := NewSchemaSet()
+	schemaSet.Put(SchemaRootRef, enumAnyOfSchema)
+	c.WithSchemas(schemaSet)
+	if c.schemaSet == nil {
+		t.Fatalf("Did not correctly compile an enum inside an anyOf")
+	}
+}
+
 const objectSchema = `{
 	"$schema": "http://json-schema.org/draft-07/schema",
 	"$id": "http://example.com/example.json",
@@ -5352,4 +5422,76 @@ const allOfSchemaWithUnevenArray = `{
 			}]
 		}
 	]
+}`
+const enumStringSchema = `{
+    "type": "object",
+    "properties": {
+        "server":{
+            "type": "string",
+            "enum": ["one", "two", "three"] 
+        }
+    }
+}`
+
+const enumNumberSchema = `{
+    "type": "object",
+    "properties": {
+        "server":{
+            "type": "number",
+            "enum": [1, 2, 3] 
+        }
+    }
+}`
+
+const enumNullSchema = `{
+    "type": "object",
+    "properties": {
+        "server":{
+            "enum": [null] 
+        }
+    }
+}`
+
+const enumBooleanSchema = `{
+    "type": "object",
+    "properties": {
+        "server":{
+            "enum": [true] 
+        }
+    }
+}`
+
+const enumMixSchema = `{
+    "type": "object",
+    "properties": {
+        "server":{
+            "enum": ["one", 3, null, true] 
+        }
+    }
+}`
+
+const enumArraySchema = `{
+    "type": "array",
+    "items": {
+        "enum": ["one", "two", 4]
+    }
+}`
+
+const enumAnyOfSchema = `{
+    "type": "object",
+    "properties": {
+        "server":{
+            "anyOf": [
+                {   "enum": ["one", "two", 5]     },
+                {
+                    "type": "object",
+                    "properties": {
+                        "prop1": {"type": "string"},
+                        "prop2": {"type": "number"}
+                    }
+                }
+                
+            ]
+        }
+    }
 }`

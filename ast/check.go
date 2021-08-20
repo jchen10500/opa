@@ -352,13 +352,55 @@ func (tc *typeChecker) checkExprEq(env *TypeEnv, expr *Expr) *Error {
 	a, b := expr.Operand(0), expr.Operand(1)
 	typeA, typeB := env.Get(a), env.Get(b)
 
+	var matchErr *Error
+
 	if !unify2(env, a, typeA, b, typeB) {
 		err := NewError(TypeErr, expr.Location, "match error")
 		err.Details = &UnificationErrDetail{
 			Left:  typeA,
 			Right: typeB,
 		}
-		return err
+		matchErr = err
+	}
+
+	// Update match error with enum match error in the case of enum type
+	_, ok1 := typeA.(types.Enum)
+	_, ok2 := typeB.(types.Enum)
+	if ok1 || ok2 {
+		matchErr = checkEnumErr(expr, a, typeA, b, typeB)
+	}
+
+	return matchErr
+}
+
+func checkEnumErr(expr *Expr, a *Term, typeA types.Type, b *Term, typeB types.Type) *Error {
+	if firstErr := checkEnumError(expr, a, typeA, b, typeB); firstErr != nil {
+		return firstErr
+	}
+
+	if secondErr := checkEnumError(expr, b, typeB, a, typeA); secondErr != nil {
+		return secondErr
+	}
+
+	return nil
+}
+
+func checkEnumError(expr *Expr, a *Term, typeA types.Type, b *Term, typeB types.Type) *Error {
+	switch tpeA := typeA.(type) {
+	case types.Enum:
+		if err := unifyEnum(expr, a, tpeA, b, typeB); err != nil {
+			return err
+		}
+	case types.Any:
+		if tpeA.Contains(types.E) {
+			for i := range tpeA {
+				if enumType, ok := tpeA[i].(types.Enum); ok {
+					if err := unifyEnum(expr, a, enumType, b, typeB); err != nil {
+						return err
+					}
+				}
+			}
+		}
 	}
 
 	return nil
@@ -552,6 +594,19 @@ func unify1Set(env *TypeEnv, val Set, tpe *types.Set, union bool) bool {
 	return !val.Until(func(elem *Term) bool {
 		return !unify1(env, elem, of, union)
 	})
+}
+
+func unifyEnum(expr *Expr, a *Term, enumType types.Enum, b *Term, typeB types.Type) *Error {
+	// If enum type does not contain the value of b, then there is an enum match error
+	if !enumType.ContainsValue(b.String()) && !enumType.IsSameType(typeB) {
+		err := NewError(TypeErr, expr.Location, "enum value match error")
+		err.Details = &UnificationErrDetail{
+			Left:  enumType,
+			Right: typeB,
+		}
+		return err
+	}
+	return nil
 }
 
 func (tc *typeChecker) err(errors []*Error) {
@@ -773,6 +828,12 @@ func unifies(a, b types.Type) bool {
 	case types.String:
 		_, ok := b.(types.String)
 		return ok
+	case types.Enum: // currently enum type can be unified by null, boolean, string, or number
+		switch b.(type) {
+		case types.Null, types.Boolean, types.Number, types.String:
+			return true
+		}
+		return false
 	case *types.Array:
 		b, ok := b.(*types.Array)
 		if !ok {

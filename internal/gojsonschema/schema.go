@@ -656,7 +656,7 @@ func (d *Schema) parseSchema(documentNode interface{}, currentSchema *SubSchema)
 
 	// validation : all
 	if vConst, found := m[KeyConst]; found && *currentSchema.Draft >= Draft6 {
-		is, err := marshalWithoutNumber(vConst)
+		is, err := MarshalWithoutNumber(vConst)
 		if err != nil {
 			return err
 		}
@@ -668,17 +668,17 @@ func (d *Schema) parseSchema(documentNode interface{}, currentSchema *SubSchema)
 		return err
 	}
 	for _, v := range enum {
-		is, err := marshalWithoutNumber(v)
+		is, err := MarshalWithoutNumber(v)
 		if err != nil {
 			return err
 		}
-		if isStringInSlice(currentSchema.enum, *is) {
+		if isStringInSlice(currentSchema.Enum, *is) {
 			return errors.New(formatErrorDescription(
 				Locale.KeyItemsMustBeUnique(),
 				ErrorDetails{"key": KeyEnum},
 			))
 		}
-		currentSchema.enum = append(currentSchema.enum, *is)
+		currentSchema.Enum = append(currentSchema.Enum, *is)
 	}
 
 	// validation : SubSchema
