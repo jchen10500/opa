@@ -598,7 +598,9 @@ func unify1Set(env *TypeEnv, val Set, tpe *types.Set, union bool) bool {
 
 func unifyEnum(expr *Expr, a *Term, enumType types.Enum, b *Term, typeB types.Type) *Error {
 	// If enum type does not contain the value of b, then there is an enum match error
-	if !enumType.ContainsValue(b.String()) && !enumType.IsSameType(typeB) {
+	bStr := b.String()
+	fmt.Println(bStr)
+	if !enumType.ContainsValue(b.String()) || !enumType.IsSameType(typeB) {
 		err := NewError(TypeErr, expr.Location, "enum value match error")
 		err.Details = &UnificationErrDetail{
 			Left:  enumType,
