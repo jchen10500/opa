@@ -28,10 +28,11 @@ func TestStrings(t *testing.T) {
 				NewSet(NewString()),
 			}, NewString(),
 		)},
+		{"eee", NewEnum(A, make([]string, 0))},
 		{"nil", nil},
 	}, NewDynamicProperty(S, N))
 
-	expected := `object<bar: boolean, baz: number, corge: array<any, any<null, string>, set[string]>[string], foo: null, nil: ???, qux: string>[string: number]`
+	expected := `object<bar: boolean, baz: number, corge: array<any, any<null, string>, set[string]>[string], eee: enum, foo: null, nil: ???, qux: string>[string: number]`
 
 	if tpe.String() != expected {
 		t.Fatalf("Expected %v but got: %v", expected, tpe)
@@ -168,6 +169,9 @@ func TestOr(t *testing.T) {
 		{NewAny(), NewNull(), NewAny()},
 		{NewNull(), NewAny(), NewAny()},
 		{NewNull(), NewAny(NewString(), NewNumber()), NewAny(NewString(), NewNumber(), NewNull())},
+		{NewString(), NewEnum(A, make([]string, 0)), NewString()},
+		{NewString(), NewEnum(S, make([]string, 0)), NewString()},
+		{NewNumber(), NewEnum(S, make([]string, 0)), NewAny(NewString(), NewNumber())},
 		{NewAny(), NewAny(), NewAny()},
 		{NewAny(NewNull(), NewNumber()), NewAny(), NewAny()},
 		{NewAny(NewNumber(), NewString()), NewAny(NewNull(), NewBoolean()), NewAny(NewNull(), NewBoolean(), NewString(), NewNumber())},
@@ -212,6 +216,7 @@ func TestSelect(t *testing.T) {
 		{"scalar-2", S, "1", nil},
 		{"scalar-3", B, "1", nil},
 		{"scalar-4", NewNull(), "1", nil},
+		{"enum number", NewEnum(N, []string{"1", "2", "3"}), 3, N},
 	}
 
 	for _, tc := range tests {
@@ -340,6 +345,7 @@ func TestMarshalJSON(t *testing.T) {
 			[]*StaticProperty{
 				{"foo", N},
 				{"func", NewFunction([]Type{S}, N)},
+				{"foo2", NewEnum(N, []string{"1", "2"})},
 			},
 			NewDynamicProperty(S, NewArray([]Type{NewSet(B)}, N)),
 		),
@@ -360,6 +366,13 @@ func TestMarshalJSON(t *testing.T) {
 					{
 						"key": "foo",
 						"value": {"type": "number"}
+					},
+					{
+						"key": "foo2",
+						"value": {
+							"type": "enum",
+							"values": ["1", "2"]
+						}
 					},
 					{
 						"key": "func",

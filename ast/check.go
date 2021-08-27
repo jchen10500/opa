@@ -352,55 +352,13 @@ func (tc *typeChecker) checkExprEq(env *TypeEnv, expr *Expr) *Error {
 	a, b := expr.Operand(0), expr.Operand(1)
 	typeA, typeB := env.Get(a), env.Get(b)
 
-	var matchErr *Error
-
 	if !unify2(env, a, typeA, b, typeB) {
 		err := NewError(TypeErr, expr.Location, "match error")
 		err.Details = &UnificationErrDetail{
 			Left:  typeA,
 			Right: typeB,
 		}
-		matchErr = err
-	}
-
-	// Update match error with enum match error in the case of enum type
-	_, ok1 := typeA.(types.Enum)
-	_, ok2 := typeB.(types.Enum)
-	if ok1 || ok2 {
-		matchErr = checkEnumErr(expr, a, typeA, b, typeB)
-	}
-
-	return matchErr
-}
-
-func checkEnumErr(expr *Expr, a *Term, typeA types.Type, b *Term, typeB types.Type) *Error {
-	if firstErr := checkEnumError(expr, a, typeA, b, typeB); firstErr != nil {
-		return firstErr
-	}
-
-	if secondErr := checkEnumError(expr, b, typeB, a, typeA); secondErr != nil {
-		return secondErr
-	}
-
-	return nil
-}
-
-func checkEnumError(expr *Expr, a *Term, typeA types.Type, b *Term, typeB types.Type) *Error {
-	switch tpeA := typeA.(type) {
-	case types.Enum:
-		if err := unifyEnum(expr, a, tpeA, b, typeB); err != nil {
-			return err
-		}
-	case types.Any:
-		if tpeA.Contains(types.E) {
-			for i := range tpeA {
-				if enumType, ok := tpeA[i].(types.Enum); ok {
-					if err := unifyEnum(expr, a, enumType, b, typeB); err != nil {
-						return err
-					}
-				}
-			}
-		}
+		return err
 	}
 
 	return nil
@@ -411,11 +369,29 @@ func unify2(env *TypeEnv, a *Term, typeA types.Type, b *Term, typeB types.Type) 
 	nilA := types.Nil(typeA)
 	nilB := types.Nil(typeB)
 
+	// If one of types is an enum or contains an enum, check unifyEnum instead
+	enumA, ok1 := typeA.(types.Enum)
+	enumB, ok2 := typeB.(types.Enum)
+
 	if nilA && !nilB {
+		if ok1 && !ok2 {
+			return unifyEnum(a, enumA, b, typeB, false)
+		}
 		return unify1(env, a, typeB, false)
 	} else if nilB && !nilA {
+		if !ok1 && ok2 {
+			return unifyEnum(b, enumB, a, typeA, false)
+		}
 		return unify1(env, b, typeA, false)
 	} else if !nilA && !nilB {
+		if ok1 || ok2 {
+			return unifyEnum(a, typeA, b, typeB, false)
+		}
+
+		if types.Contains(typeA, types.E) || types.Contains(typeB, types.E) {
+			return unifyEnum(a, typeA, b, typeB, false)
+		}
+
 		return unifies(typeA, typeB)
 	}
 
@@ -596,19 +572,36 @@ func unify1Set(env *TypeEnv, val Set, tpe *types.Set, union bool) bool {
 	})
 }
 
-func unifyEnum(expr *Expr, a *Term, enumType types.Enum, b *Term, typeB types.Type) *Error {
-	// If enum type does not contain the value of b, then there is an enum match error
-	bStr := b.String()
-	fmt.Println(bStr)
-	if !enumType.ContainsValue(b.String()) || !enumType.IsSameType(typeB) {
-		err := NewError(TypeErr, expr.Location, "enum value match error")
-		err.Details = &UnificationErrDetail{
-			Left:  enumType,
-			Right: typeB,
-		}
-		return err
+func unifyEnum(a *Term, typeA types.Type, b *Term, typeB types.Type, flipped bool) bool {
+	nilA := types.Nil(typeA)
+	if nilA {
+		return true
 	}
-	return nil
+
+	switch tpeA := typeA.(type) {
+	case types.Enum:
+		if !tpeA.ContainsValue(b.String()) {
+			if flipped {
+				return types.Compare(tpeA, typeB) == 0
+			} else if tpeB, ok := typeB.(types.Enum); ok {
+				return types.Compare(tpeA, tpeB) == 0
+			}
+			return false
+		}
+		return true
+	case types.Any:
+		var unify bool
+		for _, tpe := range tpeA {
+			if tpeEnum, ok := tpe.(types.Enum); ok {
+				unify = unify || unifyEnum(a, tpeEnum, b, typeB, flipped)
+			} else {
+				unify = unify || unifies(tpe, typeB)
+			}
+		}
+		return unify
+	}
+
+	return unifyEnum(b, typeB, a, typeA, true)
 }
 
 func (tc *typeChecker) err(errors []*Error) {
@@ -831,9 +824,11 @@ func unifies(a, b types.Type) bool {
 		_, ok := b.(types.String)
 		return ok
 	case types.Enum: // currently enum type can be unified by null, boolean, string, or number
-		switch b.(type) {
+		switch b := b.(type) {
 		case types.Null, types.Boolean, types.Number, types.String:
 			return true
+		case types.Enum:
+			return types.Compare(a.Type, b.Type) == 0
 		}
 		return false
 	case *types.Array:
@@ -1341,7 +1336,6 @@ func (as *annotationSet) GetRuleScope(r *Rule) []*Annotations {
 
 func (as *annotationSet) GetSubpackagesScope(path Ref) []*Annotations {
 	if as == nil {
-		return nil
 	}
 	return as.byPath.Ancestors(path)
 }

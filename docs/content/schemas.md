@@ -511,6 +511,7 @@ deny {
 ```
 
 We can see that `request` is an object with two options as indicated by the choices under `anyOf`: 
+
 * contains property `kind`, which has properties `kind` and `version`
 * contains property `server`, which has properties `accessNum` and `version`
 
@@ -586,6 +587,7 @@ deny {
 ```
 
 We can see that `request` is an object with properties as indicated by the elements listed under `allOf`: 
+
 * contains property `kind`, which has properties `kind` and `version`
 * contains property `server`, which has properties `accessNum` and `version`
 
@@ -605,6 +607,12 @@ Once this is fixed, the second typo is highlighted, informing the user that `ver
 ```
 Because the properties `kind`, `version`, and `accessNum` are all under the `allOf` keyword, the resulting schema that the given data must be validated against will contain the types contained in these properties children (string and integer). 
 
+### Supporting JSON Schema generic keywords 
+
+JSON Schema also provides generic keywords such as `enum` to restrict a set of values for a field. These values can range in their types as long as `type` is not declared in the same scope. The type checker can inform the system of a match error if value to a rule should only be enumerated over certain values. 
+
+For instance, consider 
+
 ## Limitations
 
 Currently this feature admits schemas written in JSON Schema but does not support every feature available in this format.
@@ -615,7 +623,6 @@ In particular the following features are not yet supported:
 * additional items for arrays
 * contains for arrays
 * oneOf, not
-* enum
 * if/then/else
 
 A note of caution: overriding is a powerful capability that must be used carefully. For example, the user is allowed to write:

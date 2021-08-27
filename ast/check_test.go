@@ -2021,3 +2021,100 @@ q = p`,
 	}
 
 }
+
+// func TestCheckEnumMatchErrors(t *testing.T) {
+// 	tests := []struct {
+// 		note        string
+// 		typeA       types.Type
+// 		typeB       types.Type
+// 		expectedErr bool
+// 	}{
+// 		{"test types.S with enum type number", types.S, types.NewEnum(types.N, []string{}),
+// 		true},
+// 	}
+
+// 	for _, tc := range tests {
+// 		t.Run(tc.note, func(t *testing.T) {
+// 			checker := newTypeChecker()
+// 			checker.checkExprEq(typeA, typeB)
+// 		})
+// 	}
+// }
+
+const enumSchema1 = `{
+    "$schema": "http://json-schema.org/draft-04/schema#",
+    "type": "object",
+    "properties": {
+        "server":{    
+            "type": "number",
+            "enum": [11, 13]
+        },
+        "prop2": {
+            "type": "string"
+        }
+    }
+}`
+
+func TestCheckAnnotationRules2(t *testing.T) {
+
+	eschema := util.MustUnmarshalJSON([]byte(enumSchema1))
+
+	module22 := `
+package policy
+
+default deny = false 
+
+# METADATA
+# scope: rule
+# schemas:
+#   - input: schema["input"]
+deny { input.server == "12" }`
+
+	schemaSet := NewSchemaSet()
+	schemaSet.Put(MustParseRef("schema.input"), eschema)
+
+	tests := []struct {
+		note   string
+		module string
+		err    string
+	}{
+		{note: "enum schema test 1", module: module22, err: "rego_type_error: enum value match error"},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.note, func(t *testing.T) {
+			mod, err := ParseModuleWithOpts("test.rego", tc.module, ParserOptions{
+				ProcessAnnotation: true,
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			var elems []util.T
+			for _, rule := range mod.Rules {
+				elems = append(elems, rule)
+				for next := rule.Else; next != nil; next = next.Else {
+					elems = append(elems, next)
+				}
+			}
+
+			oldTypeEnv := newTypeChecker().WithSchemaSet(schemaSet).Env(BuiltinMap)
+			typeenv, errors := newTypeChecker().WithSchemaSet(schemaSet).CheckTypes(oldTypeEnv, elems)
+			if len(errors) > 0 {
+				for _, e := range errors {
+					if tc.err == "" || !strings.Contains(e.Error(), tc.err) {
+						t.Fatalf("Unexpected check rule error when processing annotations: %v", e)
+					}
+				}
+				return
+			} else if tc.err != "" {
+				t.Fatalf("Expected error %q but got success", tc.err)
+			}
+
+			if oldTypeEnv.tree.children != nil && typeenv.next.tree.children != nil && (typeenv.next.tree.children.Len() != oldTypeEnv.tree.children.Len()) {
+				t.Fatalf("Unexpected type env")
+			}
+
+		})
+	}
+}

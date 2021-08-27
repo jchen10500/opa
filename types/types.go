@@ -156,7 +156,7 @@ func (t Enum) MarshalJSON() ([]byte, error) {
 }
 
 func (t Enum) String() string {
-	prefix := "enum "
+	prefix := "enum"
 	if len(t.Values) == 0 {
 		return prefix
 	}
@@ -164,25 +164,26 @@ func (t Enum) String() string {
 	for i, item := range t.Values {
 		buf[i] = item
 	}
-	return prefix + t.Type.String() + "<" + strings.Join(buf, ", ") + ">"
+	return prefix + " " + t.Type.String() + "<" + strings.Join(buf, ", ") + ">"
 }
 
 // ContainsValue returns true if t contains the other value.
 func (t Enum) ContainsValue(other string) bool {
 	for i := range t.Values {
-		if t.Values[i] == other {
+		var primVal string
+		primValArr := strings.Split(t.Values[i], "\"")
+
+		if len(primValArr) == 3 {
+			primVal = primValArr[1]
+		} else {
+			primVal = primValArr[0]
+		}
+
+		if primVal == other {
 			return true
 		}
 	}
 	return len(t.Values) == 0
-}
-
-// IsSameType returns true if t and other contians the same enumerated type
-func (t Enum) IsSameType(other Type) bool {
-	if t.Type.typeMarker() == other.typeMarker() {
-		return true
-	}
-	return false
 }
 
 // Array represents the array type.
@@ -446,6 +447,10 @@ func (t Any) Contains(other Type) bool {
 	for i := range t {
 		if Compare(t[i], other) == 0 {
 			return true
+		}
+
+		if enumI, ok := t[i].(Enum); ok {
+			return Compare(enumI, other) <= 0
 		}
 	}
 	return len(t) == 0
@@ -946,14 +951,14 @@ func typeSliceCompare(a, b []Type) int {
 }
 
 func typeOrder(x Type) int {
-	switch x.(type) {
+	switch x := x.(type) {
 	case Null:
 		return 0
 	case Boolean:
 		return 1
 	case Number:
 		return 2
-	case String, Enum:
+	case String:
 		return 3
 	case *Array:
 		return 4
@@ -967,6 +972,9 @@ func typeOrder(x Type) int {
 		return 8
 	case nil:
 		return -1
+	case Enum: // returns the type order of the Type field in Enum
+		return typeOrder(x.Type)
 	}
+
 	panic("unreachable")
 }

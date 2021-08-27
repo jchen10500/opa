@@ -4547,73 +4547,59 @@ func TestAnyOfArrayMissing(t *testing.T) {
 	}
 }
 
-func TestEnumStringSchema(t *testing.T) {
-	c := NewCompiler()
-	schemaSet := NewSchemaSet()
-	schemaSet.Put(SchemaRootRef, enumStringSchema)
-	c.WithSchemas(schemaSet)
-	if c.schemaSet == nil {
-		t.Fatalf("Did not correctly compile an enum schema of strings")
+func TestCompileEnumSchemas(t *testing.T) {
+	tests := []struct {
+		note        string
+		schema      string
+		compiledErr string
+	}{
+		{
+			note:        "Test enum string schema",
+			schema:      enumStringSchema,
+			compiledErr: "Did not correctly compile an enum schema of strings",
+		},
+		{
+			note:        "Test enum number schema",
+			schema:      enumNumberSchema,
+			compiledErr: "Did not correctly compile an enum schema of numbers",
+		},
+		{
+			note:        "Test enum null schema",
+			schema:      enumNullSchema,
+			compiledErr: "Did not correctly compile an enum schema of null",
+		},
+		{
+			note:        "Test enum boolean schema",
+			schema:      enumBooleanSchema,
+			compiledErr: "Did not correctly compile an enum schema of boolean",
+		},
+		{
+			note:        "Test enum mix schema",
+			schema:      enumMixSchema,
+			compiledErr: "Did not correctly compile an enum schema of mix types",
+		},
+		{
+			note:        "Test enum array schema",
+			schema:      enumArraySchema,
+			compiledErr: "Did not correctly compile an enum inside an array",
+		},
+		{
+			note:        "Test enum anyOf schema",
+			schema:      enumAnyOfSchema,
+			compiledErr: "Did not correctly compile an enum inside an anyOf",
+		},
 	}
-}
 
-func TestEnumNumberSchema(t *testing.T) {
-	c := NewCompiler()
-	schemaSet := NewSchemaSet()
-	schemaSet.Put(SchemaRootRef, enumNumberSchema)
-	c.WithSchemas(schemaSet)
-	if c.schemaSet == nil {
-		t.Fatalf("Did not correctly compile an enum schema of numbers")
-	}
-}
-
-func TestEnumNullSchema(t *testing.T) {
-	c := NewCompiler()
-	schemaSet := NewSchemaSet()
-	schemaSet.Put(SchemaRootRef, enumNullSchema)
-	c.WithSchemas(schemaSet)
-	if c.schemaSet == nil {
-		t.Fatalf("Did not correctly compile an enum schema of null")
-	}
-}
-
-func TestEnumBooleanSchema(t *testing.T) {
-	c := NewCompiler()
-	schemaSet := NewSchemaSet()
-	schemaSet.Put(SchemaRootRef, enumBooleanSchema)
-	c.WithSchemas(schemaSet)
-	if c.schemaSet == nil {
-		t.Fatalf("Did not correctly compile an enum schema of boolean")
-	}
-}
-
-func TestEnumMixSchema(t *testing.T) {
-	c := NewCompiler()
-	schemaSet := NewSchemaSet()
-	schemaSet.Put(SchemaRootRef, enumMixSchema)
-	c.WithSchemas(schemaSet)
-	if c.schemaSet == nil {
-		t.Fatalf("Did not correctly compile an enum schema of mix types of string, num, bool, and null")
-	}
-}
-
-func TestEnumArraySchema(t *testing.T) {
-	c := NewCompiler()
-	schemaSet := NewSchemaSet()
-	schemaSet.Put(SchemaRootRef, enumArraySchema)
-	c.WithSchemas(schemaSet)
-	if c.schemaSet == nil {
-		t.Fatalf("Did not correctly compile an enum inside an array")
-	}
-}
-
-func TestEnumAnyOfSchema(t *testing.T) {
-	c := NewCompiler()
-	schemaSet := NewSchemaSet()
-	schemaSet.Put(SchemaRootRef, enumAnyOfSchema)
-	c.WithSchemas(schemaSet)
-	if c.schemaSet == nil {
-		t.Fatalf("Did not correctly compile an enum inside an anyOf")
+	for _, tc := range tests {
+		t.Run(tc.note, func(t *testing.T) {
+			c := NewCompiler()
+			schemaSet := NewSchemaSet()
+			schemaSet.Put(SchemaRootRef, enumAnyOfSchema)
+			c.WithSchemas(schemaSet)
+			if c.schemaSet == nil {
+				t.Fatalf(tc.compiledErr)
+			}
+		})
 	}
 }
 
